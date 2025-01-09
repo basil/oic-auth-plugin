@@ -92,7 +92,6 @@ import jenkins.model.Jenkins;
 import jenkins.security.ApiTokenProperty;
 import jenkins.security.FIPS140;
 import jenkins.security.SecurityListener;
-import jenkins.util.SystemProperties;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -276,16 +275,6 @@ public class OicSecurityRealm extends SecurityRealm implements Serializable {
     /** Additional number of seconds to add to token expiration
      */
     private Long allowedTokenExpirationClockSkewSeconds = 60L;
-
-    /**
-     * Flag when set to true will cause enforce nonce checking in the refresh flow.
-     * https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokenResponse states the nonce claim should not be present
-     * and when faced with a provider that adheres to this if using a nonce, the library attempts to validate the "missing" nonce and fails.
-     * So this is disabled by default, but if the provider does send the nonce in the claim then we do need to verify it.
-     * But there is no way to know ahead of time if the server is going to send this or not.
-     */
-    private static boolean checkNonceInRefreshFlow =
-            SystemProperties.getBoolean(OicSecurityRealm.class.getName() + ".checkNonceInRefreshFlow", false);
 
     /** old field that had an '/' implicitly added at the end,
      * transient because we no longer want to have this value stored
@@ -540,7 +529,7 @@ public class OicSecurityRealm extends SecurityRealm implements Serializable {
             // auto configuration does not need to supply scopes
             conf.setScope(oidcProviderMetadata.getScopes().toString());
         }
-        conf.setUseNonce(!this.nonceDisabled);
+        conf.setUseNonce(true);
         if (allowedTokenExpirationClockSkewSeconds != null) {
             conf.setMaxClockSkew(allowedTokenExpirationClockSkewSeconds.intValue());
         }
@@ -1434,7 +1423,7 @@ public class OicSecurityRealm extends SecurityRealm implements Serializable {
         // however, if it is present, its value MUST be the same as in the ID Token issued at the time of the original
         // authentication
         // by default we will strip out the nonce unless the user has opted into it.
-        client.getConfiguration().setUseNonce(!nonceDisabled && checkNonceInRefreshFlow);
+        client.getConfiguration().setUseNonce(true);
         try {
             OidcProfile profile = new OidcProfile();
             profile.setAccessToken(new BearerAccessToken(credentials.getAccessToken()));
